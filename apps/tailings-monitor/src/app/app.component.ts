@@ -6,7 +6,9 @@ import { MatIconModule } from '@angular/material/icon'
 import { MatSidenavModule } from '@angular/material/sidenav'
 import { MatToolbarModule } from '@angular/material/toolbar'
 import { Store } from '@ngrx/store'
+import { map } from 'rxjs'
 import { TailingsActions } from './store/tailings.actions'
+import { selectNetworkOnline, selectOutbox, selectPendingConflicts } from './store/tailings.selectors'
 
 @Component({
   selector: 'app-root',
@@ -20,12 +22,13 @@ import { TailingsActions } from './store/tailings.actions'
           <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><span>监测总览</span><small>地图与阈值</small></a>
           <a routerLink="/monitoring" routerLinkActive="active"><span>测点与读数</span><small>原始数据</small></a>
           <a routerLink="/anomalies" routerLinkActive="active"><span>异常处置</span><small>复核与会签</small></a>
-          <a routerLink="/audit" routerLinkActive="active"><span>审计追溯</span><small>历史版本</small></a>
+          <a routerLink="/sync" routerLinkActive="active"><span>离线交接与合并</span><small>待办重试 · 字段冲突</small></a>
+          <a routerLink="/audit" routerLinkActive="active"><span>审计追溯</span><small>历史版本 · 审阅包</small></a>
         </nav>
-        <div class="side-state"><span>原始读数保护</span><b>只读且不可覆盖</b><small>处置修订单独版本化</small></div>
+        <div class="side-state"><span>原始读数保护</span><b>只读且不可覆盖</b><small>晚到记录不覆盖已签批方案；处置修订单独版本化</small></div>
       </mat-sidenav>
       <mat-sidenav-content>
-        <mat-toolbar class="topbar"><div><span>矿山安全运营中心 / 尾矿库</span><h1>监测计划与异常处置审阅</h1></div><button mat-button (click)="reset()">恢复演示数据</button></mat-toolbar>
+        <mat-toolbar class="topbar"><div><span>矿山安全运营中心 / 尾矿库</span><h1>监测计划与异常处置审阅</h1></div><div class="top-actions"><span class="net-state" [class.offline]="!(online$ | async)">{{ (online$ | async) ? '内网在线' : '离线暂存' }} · 本地待办 {{ (outboxCount$ | async) || 0 }} · 待交接 {{ (conflictCount$ | async) || 0 }}</span><button mat-button (click)="reset()">恢复演示数据</button></div></mat-toolbar>
         <main><router-outlet /></main>
       </mat-sidenav-content>
     </mat-sidenav-container>
@@ -44,12 +47,16 @@ import { TailingsActions } from './store/tailings.actions'
     .side-state span, .side-state small { color: #87a2aa; font-size: 10px; } .side-state b { font-size: 12px; }
     .topbar { height: 78px; background: white; border-bottom: 1px solid #d9e1df; display: flex; justify-content: space-between; padding: 0 28px; }
     .topbar span { display: block; color: #74827f; font-size: 10px; } .topbar h1 { margin: 3px 0 0; font-size: 19px; }
+    .top-actions { display: flex; align-items: center; gap: 14px; }.net-state { font-size: 11px; color: #2e765a; background: #e7f3ee; padding: 6px 10px; }.net-state.offline { color: #8a5a18; background: #f8efd9; }
     main { min-height: calc(100vh - 78px); }
     :host ::ng-deep .mat-drawer-inner-container { overflow: hidden; }
   `]
 })
 export class AppComponent implements OnInit {
   private readonly store = inject(Store)
+  readonly online$ = this.store.select(selectNetworkOnline)
+  readonly outboxCount$ = this.store.select(selectOutbox).pipe(map((items) => items.length))
+  readonly conflictCount$ = this.store.select(selectPendingConflicts).pipe(map((items) => items.length))
   ngOnInit(): void { this.store.dispatch(TailingsActions.loadDataset()) }
   reset(): void { this.store.dispatch(TailingsActions.resetDemo()) }
 }
