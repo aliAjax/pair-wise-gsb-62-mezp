@@ -1,5 +1,5 @@
 import { createActionGroup, emptyProps, props } from '@ngrx/store'
-import type { AuditEntry, DispositionPlan, ExpertOpinion, FieldReview, TailingsDataset } from '../domain'
+import type { Anomaly, AuditEntry, DispositionPlan, ExpertOpinion, FieldConflict, FieldReview, TailingsDataset, Threshold } from '../domain'
 
 export const TailingsActions = createActionGroup({
   source: 'Tailings',
@@ -17,6 +17,25 @@ export const TailingsActions = createActionGroup({
     'Update Keyword': props<{ keyword: string }>(),
     'Update Status': props<{ status: string }>(),
     'Add Audit': props<{ entry: AuditEntry }>(),
-    'Reset Demo': emptyProps()
+    'Reset Demo': emptyProps(),
+
+    /** 离线/在线切换：离线时处置进入本地待办，在线后可与值班台合并、继续重试上报 */
+    'Toggle Online': emptyProps(),
+    'Set Online': props<{ online: boolean }>(),
+    /** 与值班台合并：传入值班台侧的异常版本（模拟另一值班台同时修改） */
+    'Merge Station Changes': props<{ anomalyId: string; station: Anomaly; stationOperator: string }>(),
+    /** 冲突逐字段交接 */
+    'Resolve Conflict': props<{ anomalyId: string; conflictKey: FieldConflict['key']; resolution: 'local' | 'station' }>(),
+    /** 发布阈值新版：未结案异常重算并重新确认 */
+    'Publish Threshold': props<{ threshold: Threshold }>(),
+    /** 值班对重算结果重新确认 */
+    'Reconfirm Recalc': props<{ anomalyId: string; operator: string; note: string }>(),
+
+    /** 本地待办上报：单条重试 / 全部重试（恢复网络后继续重试） */
+    'Retry Outbox Item': props<{ id: string }>(),
+    'Retry All Outbox': emptyProps(),
+    'Dismiss Outbox Item': props<{ id: string }>(),
+    'Sync Success': props<{ id: string }>(),
+    'Sync Failure': props<{ id: string; error: string }>()
   }
 })
